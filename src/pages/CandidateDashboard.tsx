@@ -24,6 +24,8 @@ const CandidateDashboard = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [parsing, setParsing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [applying, setApplying] = useState<string | null>(null);
 
   useEffect(() => {
