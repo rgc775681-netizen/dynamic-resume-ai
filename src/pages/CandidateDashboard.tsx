@@ -156,10 +156,17 @@ const CandidateDashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Paste your resume text below. Our AI will extract skills, experience, education, and more.</p>
+              <p className="text-sm text-muted-foreground">Upload a PDF resume or paste text. Our AI will extract skills, experience, education, and more.</p>
+              <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={onPdfSelected} />
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" disabled={extracting || parsing} onClick={() => fileInputRef.current?.click()}>
+                  {extracting ? <><Loader2 className="mr-1 animate-spin" /> Reading PDF...</> : <><Upload className="mr-1" /> Upload PDF</>}
+                </Button>
+                <span className="text-xs text-muted-foreground self-center">— or paste text below —</span>
+              </div>
               <Textarea rows={10} value={resumeText} onChange={e => setResumeText(e.target.value)}
                 placeholder={"John Doe\njohn@example.com · +1 555 0123\n\nEXPERIENCE\nSenior Engineer at Acme (2020-2024)\n- Built scalable APIs in Python and PostgreSQL..."} />
-              <Button variant="hero" disabled={parsing} onClick={parseResume}>
+              <Button variant="hero" disabled={parsing || extracting} onClick={() => parseResume()}>
                 <Sparkles className="mr-1" /> {parsing ? "AI Parsing..." : "Parse with AI"}
               </Button>
             </div>
