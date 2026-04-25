@@ -15,7 +15,9 @@ const RoleSelect = () => {
   const pick = async (role: "recruiter" | "candidate") => {
     if (!user) return;
     setBusy(true);
-    const { error } = await supabase.from("user_roles").insert({ user_id: user.id, role });
+    const { error } = await supabase
+      .from("user_roles")
+      .upsert({ user_id: user.id, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (error) { toast.error(error.message); setBusy(false); return; }
     await refreshRole();
     toast.success(`Welcome, ${role}!`);
