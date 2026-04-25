@@ -25,8 +25,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (uid: string) => {
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle();
-    setRole((data?.role as Role) ?? null);
+    const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+    const roles = (data || []).map((r: any) => r.role as Role);
+    // Prefer recruiter if user has both
+    const picked = roles.includes("recruiter" as Role) ? "recruiter" : roles[0] ?? null;
+    setRole((picked as Role) ?? null);
   };
 
   useEffect(() => {
