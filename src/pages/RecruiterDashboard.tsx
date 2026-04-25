@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, MapPin, DollarSign, Users, Sparkles } from "lucide-react";
+import { Plus, Briefcase, MapPin, DollarSign, Users, Sparkles, Check, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 interface Job { id: string; title: string; company: string; location: string; description: string; required_skills: string[]; experience_years: number; salary_range: string; created_at: string; }
