@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 const RoleSelect = () => {
   const navigate = useNavigate();
-  const { user, loading, refreshRole } = useAuth();
+  const { user, loading, refreshRole, setActiveRole } = useAuth();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate("/auth"); }, [user, loading, navigate]);
@@ -19,6 +19,7 @@ const RoleSelect = () => {
       .from("user_roles")
       .upsert({ user_id: user.id, role }, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (error) { toast.error(error.message); setBusy(false); return; }
+    setActiveRole(role);
     await refreshRole();
     toast.success(`Welcome, ${role}!`);
     navigate(role === "recruiter" ? "/recruiter" : "/candidate");

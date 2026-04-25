@@ -8,28 +8,43 @@ interface AuthCtx {
   user: User | null;
   session: Session | null;
   role: Role;
+  availableRoles: Role[];
   loading: boolean;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<void>;
+  setActiveRole: (r: Role) => void;
 }
 
 const Ctx = createContext<AuthCtx>({
-  user: null, session: null, role: null, loading: true,
-  signOut: async () => {}, refreshRole: async () => {},
+  user: null, session: null, role: null, availableRoles: [], loading: true,
+  signOut: async () => {}, refreshRole: async () => {}, setActiveRole: () => {},
 });
+
+const ACTIVE_ROLE_KEY = "talentai.activeRole";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<Role>(null);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async (uid: string) => {
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
     const roles = (data || []).map((r: any) => r.role as Role);
-    // Prefer recruiter if user has both
-    const picked = roles.includes("recruiter" as Role) ? "recruiter" : roles[0] ?? null;
+    setAvailableRoles(roles);
+    const stored = localStorage.getItem(ACTIVE_ROLE_KEY) as Role | null;
+    const picked = (stored && roles.includes(stored)) ? stored
+      : roles.includes("recruiter" as Role) ? "recruiter"
+      : roles[0] ?? null;
     setRole((picked as Role) ?? null);
+    if (picked) localStorage.setItem(ACTIVE_ROLE_KEY, picked);
+  };
+
+  const setActiveRole = (r: Role) => {
+    if (!r) return;
+    localStorage.setItem(ACTIVE_ROLE_KEY, r);
+    setRole(r);
   };
 
   useEffect(() => {
@@ -51,10 +66,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  const signOut = async () => {
+    localStorage.removeItem(ACTIVE_ROLE_KEY);
+    await supabase.auth.signOut();
+  };
   const refreshRole = async () => { if (user) await fetchRole(user.id); };
 
-  return <Ctx.Provider value={{ user, session, role, loading, signOut, refreshRole }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ user, session, role, availableRoles, loading, signOut, refreshRole, setActiveRole }}>{children}</Ctx.Provider>;
 };
 
 export const useAuth = () => useContext(Ctx);
