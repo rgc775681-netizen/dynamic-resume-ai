@@ -126,6 +126,7 @@ const CandidateDashboard = () => {
       });
       if (appErr) throw appErr;
       setAppliedIds(new Set([...appliedIds, job.id]));
+      setAppStatuses(prev => ({ ...prev, [job.id]: "pending" }));
       toast.success(`Applied! Match score: ${Math.round(scoreData.match_score)}/100`);
     } catch (e: any) {
       toast.error(e.message || "Failed to apply");
