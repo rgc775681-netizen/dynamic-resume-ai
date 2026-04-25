@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Sparkles, LogOut } from "lucide-react";
+import { Sparkles, LogOut, BarChart3 } from "lucide-react";
 
 export const Navbar = () => {
   const { user, role, signOut } = useAuth();
@@ -22,6 +22,11 @@ export const Navbar = () => {
               <Button variant="ghost" onClick={() => navigate(role === "recruiter" ? "/recruiter" : "/candidate")}>
                 Dashboard
               </Button>
+              {role === "recruiter" && (
+                <Button variant="ghost" onClick={() => navigate("/analytics")}>
+                  <BarChart3 className="w-4 h-4 mr-1" /> Analytics
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={async () => { await signOut(); navigate("/"); }}>
                 <LogOut className="w-4 h-4 mr-1" /> Sign out
               </Button>

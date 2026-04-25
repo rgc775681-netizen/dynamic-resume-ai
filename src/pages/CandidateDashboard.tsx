@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,8 +6,12 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, FileText, Briefcase, MapPin, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Sparkles, FileText, Briefcase, MapPin, ArrowRight, CheckCircle2, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface Resume { id: string; full_name: string; email: string; phone: string; skills: string[]; experience_years: number; summary: string; }
 interface Job { id: string; title: string; company: string; location: string; required_skills: string[]; salary_range: string; experience_years: number; description: string; }
@@ -20,6 +24,8 @@ const CandidateDashboard = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [parsing, setParsing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [applying, setApplying] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,16 +47,48 @@ const CandidateDashboard = () => {
     setAppliedIds(new Set((aRes.data || []).map((x: any) => x.job_id)));
   };
 
-  const parseResume = async () => {
-    if (resumeText.trim().length < 50) { toast.error("Paste a longer resume (50+ chars)."); return; }
+  const extractPdfText = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((it: any) => it.str).join(" ") + "\n\n";
+    }
+    return text.trim();
+  };
+
+  const onPdfSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") { toast.error("Please upload a PDF file"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("PDF must be under 10MB"); return; }
+    setExtracting(true);
+    try {
+      const text = await extractPdfText(file);
+      if (text.length < 50) throw new Error("Could not extract text — is this a scanned PDF?");
+      setResumeText(text);
+      toast.success(`Extracted ${text.length.toLocaleString()} characters from PDF`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to read PDF");
+    } finally {
+      setExtracting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const parseResume = async (overrideText?: string) => {
+    const text = (overrideText ?? resumeText).trim();
+    if (text.length < 50) { toast.error("Resume text too short (50+ chars)."); return; }
     setParsing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("parse-resume", { body: { resumeText } });
+      const { data, error } = await supabase.functions.invoke("parse-resume", { body: { resumeText: text } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       const { data: saved, error: insErr } = await supabase.from("resumes").insert({
-        candidate_id: user!.id, raw_text: resumeText,
+        candidate_id: user!.id, raw_text: text,
         full_name: data.full_name, email: data.email, phone: data.phone,
         skills: data.skills || [], experience_years: data.experience_years || 0,
         education: data.education || [], experience: data.experience || [], summary: data.summary,
@@ -63,6 +101,7 @@ const CandidateDashboard = () => {
       toast.error(e.message || "Failed to parse resume");
     } finally { setParsing(false); }
   };
+
 
   const apply = async (job: Job) => {
     if (!resume) { toast.error("Upload a resume first."); return; }
@@ -117,10 +156,17 @@ const CandidateDashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Paste your resume text below. Our AI will extract skills, experience, education, and more.</p>
+              <p className="text-sm text-muted-foreground">Upload a PDF resume or paste text. Our AI will extract skills, experience, education, and more.</p>
+              <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={onPdfSelected} />
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" disabled={extracting || parsing} onClick={() => fileInputRef.current?.click()}>
+                  {extracting ? <><Loader2 className="mr-1 animate-spin" /> Reading PDF...</> : <><Upload className="mr-1" /> Upload PDF</>}
+                </Button>
+                <span className="text-xs text-muted-foreground self-center">— or paste text below —</span>
+              </div>
               <Textarea rows={10} value={resumeText} onChange={e => setResumeText(e.target.value)}
                 placeholder={"John Doe\njohn@example.com · +1 555 0123\n\nEXPERIENCE\nSenior Engineer at Acme (2020-2024)\n- Built scalable APIs in Python and PostgreSQL..."} />
-              <Button variant="hero" disabled={parsing} onClick={parseResume}>
+              <Button variant="hero" disabled={parsing || extracting} onClick={() => parseResume()}>
                 <Sparkles className="mr-1" /> {parsing ? "AI Parsing..." : "Parse with AI"}
               </Button>
             </div>
