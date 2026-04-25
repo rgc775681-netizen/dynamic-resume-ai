@@ -134,12 +134,19 @@ const RecruiterDashboard = () => {
                     <p className="text-sm text-muted-foreground">No applications yet.</p>
                   ) : (
                     <div className="space-y-3">
-                      {(apps[job.id] || []).map(a => (
+                      {(apps[job.id] || []).map(a => {
+                        const status = a.status || "pending";
+                        return (
                         <div key={a.id} className="p-4 rounded-xl bg-muted/40 border border-border">
                           <div className="flex items-center justify-between mb-2 gap-2">
-                            <div>
-                              <p className="font-semibold">{a.resumes?.full_name || "Candidate"}</p>
-                              <p className="text-xs text-muted-foreground">{a.resumes?.email} · {a.resumes?.experience_years || 0} yrs</p>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <p className="font-semibold">{a.resumes?.full_name || "Candidate"}</p>
+                                <p className="text-xs text-muted-foreground">{a.resumes?.email} · {a.resumes?.experience_years || 0} yrs</p>
+                              </div>
+                              {status === "shortlisted" && <Badge className="bg-success/15 text-success border-0"><Check className="w-3 h-3 mr-0.5" /> Shortlisted</Badge>}
+                              {status === "rejected" && <Badge variant="outline" className="text-destructive border-destructive/30"><X className="w-3 h-3 mr-0.5" /> Rejected</Badge>}
+                              {status === "pending" && <Badge variant="secondary"><Clock className="w-3 h-3 mr-0.5" /> Pending</Badge>}
                             </div>
                             <div className="text-right">
                               <div className={`text-3xl font-bold ${a.match_score >= 75 ? "text-success" : a.match_score >= 50 ? "text-warning" : "text-destructive"}`}>{a.match_score}</div>
@@ -153,12 +160,30 @@ const RecruiterDashboard = () => {
                             </div>
                           )}
                           {a.missing_skills?.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1 mb-3">
                               {a.missing_skills.map(s => <Badge key={s} variant="outline" className="text-destructive border-destructive/30">✗ {s}</Badge>)}
                             </div>
                           )}
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+                            {status !== "shortlisted" && (
+                              <Button size="sm" variant="hero" onClick={() => updateStatus(a.id, job.id, "shortlisted")}>
+                                <Check className="w-4 h-4 mr-1" /> Shortlist
+                              </Button>
+                            )}
+                            {status !== "rejected" && (
+                              <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, job.id, "rejected")}>
+                                <X className="w-4 h-4 mr-1" /> Reject
+                              </Button>
+                            )}
+                            {status !== "pending" && (
+                              <Button size="sm" variant="ghost" onClick={() => updateStatus(a.id, job.id, "pending")}>
+                                Reset
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
