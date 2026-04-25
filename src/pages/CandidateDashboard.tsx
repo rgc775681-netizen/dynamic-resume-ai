@@ -199,7 +199,12 @@ const CandidateDashboard = () => {
                       </div>
                     </div>
                     {applied ? (
-                      <Button disabled variant="outline"><CheckCircle2 className="mr-1 text-success" /> Applied</Button>
+                      (() => {
+                        const st = appStatuses[job.id] || "pending";
+                        if (st === "shortlisted") return <Button disabled className="bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>;
+                        if (st === "rejected") return <Button disabled variant="outline" className="text-destructive border-destructive/30">Not selected</Button>;
+                        return <Button disabled variant="outline"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>;
+                      })()
                     ) : (
                       <Button variant="hero" disabled={!resume || applying === job.id} onClick={() => apply(job)}>
                         {applying === job.id ? "AI Matching..." : <>Apply with AI <ArrowRight className="ml-1" /></>}
