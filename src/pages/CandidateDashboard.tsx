@@ -1,0 +1,169 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navbar } from "@/components/Navbar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, FileText, Briefcase, MapPin, ArrowRight, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+
+interface Resume { id: string; full_name: string; email: string; phone: string; skills: string[]; experience_years: number; summary: string; }
+interface Job { id: string; title: string; company: string; location: string; required_skills: string[]; salary_range: string; experience_years: number; description: string; }
+
+const CandidateDashboard = () => {
+  const { user, role, loading } = useAuth();
+  const navigate = useNavigate();
+  const [resumeText, setResumeText] = useState("");
+  const [resume, setResume] = useState<Resume | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [parsing, setParsing] = useState(false);
+  const [applying, setApplying] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return navigate("/auth");
+    if (role && role !== "candidate") return navigate("/recruiter");
+    if (role === "candidate") loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, role, loading]);
+
+  const loadAll = async () => {
+    const [rRes, jRes, aRes] = await Promise.all([
+      supabase.from("resumes").select("*").eq("candidate_id", user!.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("jobs").select("*").eq("status", "open").order("created_at", { ascending: false }),
+      supabase.from("applications").select("job_id").eq("candidate_id", user!.id),
+    ]);
+    setResume((rRes.data as Resume | null) ?? null);
+    setJobs((jRes.data as Job[]) || []);
+    setAppliedIds(new Set((aRes.data || []).map((x: any) => x.job_id)));
+  };
+
+  const parseResume = async () => {
+    if (resumeText.trim().length < 50) { toast.error("Paste a longer resume (50+ chars)."); return; }
+    setParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("parse-resume", { body: { resumeText } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const { data: saved, error: insErr } = await supabase.from("resumes").insert({
+        candidate_id: user!.id, raw_text: resumeText,
+        full_name: data.full_name, email: data.email, phone: data.phone,
+        skills: data.skills || [], experience_years: data.experience_years || 0,
+        education: data.education || [], experience: data.experience || [], summary: data.summary,
+      }).select().single();
+      if (insErr) throw insErr;
+      setResume(saved as Resume);
+      setResumeText("");
+      toast.success("Resume parsed and saved!");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to parse resume");
+    } finally { setParsing(false); }
+  };
+
+  const apply = async (job: Job) => {
+    if (!resume) { toast.error("Upload a resume first."); return; }
+    setApplying(job.id);
+    try {
+      const { data: scoreData, error } = await supabase.functions.invoke("match-candidate", {
+        body: { resume, job },
+      });
+      if (error) throw error;
+      if (scoreData?.error) throw new Error(scoreData.error);
+
+      const { error: appErr } = await supabase.from("applications").insert({
+        job_id: job.id, candidate_id: user!.id, resume_id: resume.id,
+        match_score: Math.round(scoreData.match_score || 0),
+        match_reasoning: scoreData.reasoning,
+        matched_skills: scoreData.matched_skills || [],
+        missing_skills: scoreData.missing_skills || [],
+      });
+      if (appErr) throw appErr;
+      setAppliedIds(new Set([...appliedIds, job.id]));
+      toast.success(`Applied! Match score: ${Math.round(scoreData.match_score)}/100`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to apply");
+    } finally { setApplying(null); }
+  };
+
+  return (
+    <div className="min-h-screen">
+      <Navbar />
+      <main className="container mx-auto px-4 py-10 space-y-8">
+        <div className="animate-fade-up">
+          <h1 className="font-display text-4xl font-bold">Candidate <span className="gradient-text">Dashboard</span></h1>
+          <p className="text-muted-foreground mt-1">Upload your resume and let AI find the best matches.</p>
+        </div>
+
+        <div className="glow-card p-6 animate-fade-up">
+          <h2 className="font-display text-2xl font-bold mb-4 flex items-center gap-2">
+            <FileText className="w-6 h-6 text-primary" /> Your Resume
+          </h2>
+          {resume ? (
+            <div className="space-y-3">
+              <div className="grid md:grid-cols-3 gap-4 text-sm">
+                <div><p className="text-muted-foreground text-xs uppercase">Name</p><p className="font-semibold">{resume.full_name}</p></div>
+                <div><p className="text-muted-foreground text-xs uppercase">Email</p><p className="font-semibold">{resume.email || "—"}</p></div>
+                <div><p className="text-muted-foreground text-xs uppercase">Experience</p><p className="font-semibold">{resume.experience_years} years</p></div>
+              </div>
+              {resume.summary && <p className="text-sm text-muted-foreground italic">"{resume.summary}"</p>}
+              <div className="flex flex-wrap gap-1.5">
+                {resume.skills?.map(s => <Badge key={s} className="bg-gradient-primary text-white border-0">{s}</Badge>)}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setResume(null)}>Upload new resume</Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Paste your resume text below. Our AI will extract skills, experience, education, and more.</p>
+              <Textarea rows={10} value={resumeText} onChange={e => setResumeText(e.target.value)}
+                placeholder={"John Doe\njohn@example.com · +1 555 0123\n\nEXPERIENCE\nSenior Engineer at Acme (2020-2024)\n- Built scalable APIs in Python and PostgreSQL..."} />
+              <Button variant="hero" disabled={parsing} onClick={parseResume}>
+                <Sparkles className="mr-1" /> {parsing ? "AI Parsing..." : "Parse with AI"}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="font-display text-2xl font-bold">Open Positions</h2>
+          {jobs.length === 0 ? (
+            <div className="glow-card p-8 text-center text-muted-foreground">No open jobs right now.</div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {jobs.map((job, i) => {
+                const applied = appliedIds.has(job.id);
+                return (
+                  <div key={job.id} className="glow-card p-5 animate-fade-up flex flex-col" style={{ animationDelay: `${i * 50}ms` }}>
+                    <div className="flex-1">
+                      <h3 className="font-display text-lg font-bold">{job.title}</h3>
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1 mb-3">
+                        <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" />{job.company}</span>
+                        {job.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{job.location}</span>}
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description}</p>
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {job.required_skills.slice(0, 5).map(s => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}
+                      </div>
+                    </div>
+                    {applied ? (
+                      <Button disabled variant="outline"><CheckCircle2 className="mr-1 text-success" /> Applied</Button>
+                    ) : (
+                      <Button variant="hero" disabled={!resume || applying === job.id} onClick={() => apply(job)}>
+                        {applying === job.id ? "AI Matching..." : <>Apply with AI <ArrowRight className="ml-1" /></>}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default CandidateDashboard;
