@@ -47,16 +47,48 @@ const CandidateDashboard = () => {
     setAppliedIds(new Set((aRes.data || []).map((x: any) => x.job_id)));
   };
 
-  const parseResume = async () => {
-    if (resumeText.trim().length < 50) { toast.error("Paste a longer resume (50+ chars)."); return; }
+  const extractPdfText = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map((it: any) => it.str).join(" ") + "\n\n";
+    }
+    return text.trim();
+  };
+
+  const onPdfSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") { toast.error("Please upload a PDF file"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("PDF must be under 10MB"); return; }
+    setExtracting(true);
+    try {
+      const text = await extractPdfText(file);
+      if (text.length < 50) throw new Error("Could not extract text — is this a scanned PDF?");
+      setResumeText(text);
+      toast.success(`Extracted ${text.length.toLocaleString()} characters from PDF`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to read PDF");
+    } finally {
+      setExtracting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const parseResume = async (overrideText?: string) => {
+    const text = (overrideText ?? resumeText).trim();
+    if (text.length < 50) { toast.error("Resume text too short (50+ chars)."); return; }
     setParsing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("parse-resume", { body: { resumeText } });
+      const { data, error } = await supabase.functions.invoke("parse-resume", { body: { resumeText: text } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       const { data: saved, error: insErr } = await supabase.from("resumes").insert({
-        candidate_id: user!.id, raw_text: resumeText,
+        candidate_id: user!.id, raw_text: text,
         full_name: data.full_name, email: data.email, phone: data.phone,
         skills: data.skills || [], experience_years: data.experience_years || 0,
         education: data.education || [], experience: data.experience || [], summary: data.summary,
@@ -69,6 +101,7 @@ const CandidateDashboard = () => {
       toast.error(e.message || "Failed to parse resume");
     } finally { setParsing(false); }
   };
+
 
   const apply = async (job: Job) => {
     if (!resume) { toast.error("Upload a resume first."); return; }
