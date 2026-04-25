@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Briefcase, MapPin, DollarSign, Users, Sparkles } from "lucide-react";
+import { Plus, Briefcase, MapPin, DollarSign, Users, Sparkles, Check, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 interface Job { id: string; title: string; company: string; location: string; description: string; required_skills: string[]; experience_years: number; salary_range: string; created_at: string; }
@@ -62,6 +62,16 @@ const RecruiterDashboard = () => {
     setOpen(false);
     setForm({ title: "", company: "", location: "", description: "", required_skills: "", experience_years: "0", salary_range: "" });
     loadJobs();
+  };
+
+  const updateStatus = async (appId: string, jobId: string, status: "shortlisted" | "rejected" | "pending") => {
+    const { error } = await supabase.from("applications").update({ status }).eq("id", appId);
+    if (error) { toast.error(error.message); return; }
+    setApps(prev => ({
+      ...prev,
+      [jobId]: (prev[jobId] || []).map(a => a.id === appId ? { ...a, status } : a),
+    }));
+    toast.success(status === "shortlisted" ? "Candidate shortlisted ✓" : status === "rejected" ? "Candidate rejected" : "Status reset");
   };
 
   return (
@@ -124,12 +134,19 @@ const RecruiterDashboard = () => {
                     <p className="text-sm text-muted-foreground">No applications yet.</p>
                   ) : (
                     <div className="space-y-3">
-                      {(apps[job.id] || []).map(a => (
+                      {(apps[job.id] || []).map(a => {
+                        const status = a.status || "pending";
+                        return (
                         <div key={a.id} className="p-4 rounded-xl bg-muted/40 border border-border">
                           <div className="flex items-center justify-between mb-2 gap-2">
-                            <div>
-                              <p className="font-semibold">{a.resumes?.full_name || "Candidate"}</p>
-                              <p className="text-xs text-muted-foreground">{a.resumes?.email} · {a.resumes?.experience_years || 0} yrs</p>
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <p className="font-semibold">{a.resumes?.full_name || "Candidate"}</p>
+                                <p className="text-xs text-muted-foreground">{a.resumes?.email} · {a.resumes?.experience_years || 0} yrs</p>
+                              </div>
+                              {status === "shortlisted" && <Badge className="bg-success/15 text-success border-0"><Check className="w-3 h-3 mr-0.5" /> Shortlisted</Badge>}
+                              {status === "rejected" && <Badge variant="outline" className="text-destructive border-destructive/30"><X className="w-3 h-3 mr-0.5" /> Rejected</Badge>}
+                              {status === "pending" && <Badge variant="secondary"><Clock className="w-3 h-3 mr-0.5" /> Pending</Badge>}
                             </div>
                             <div className="text-right">
                               <div className={`text-3xl font-bold ${a.match_score >= 75 ? "text-success" : a.match_score >= 50 ? "text-warning" : "text-destructive"}`}>{a.match_score}</div>
@@ -143,12 +160,30 @@ const RecruiterDashboard = () => {
                             </div>
                           )}
                           {a.missing_skills?.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1 mb-3">
                               {a.missing_skills.map(s => <Badge key={s} variant="outline" className="text-destructive border-destructive/30">✗ {s}</Badge>)}
                             </div>
                           )}
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+                            {status !== "shortlisted" && (
+                              <Button size="sm" variant="hero" onClick={() => updateStatus(a.id, job.id, "shortlisted")}>
+                                <Check className="w-4 h-4 mr-1" /> Shortlist
+                              </Button>
+                            )}
+                            {status !== "rejected" && (
+                              <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, job.id, "rejected")}>
+                                <X className="w-4 h-4 mr-1" /> Reject
+                              </Button>
+                            )}
+                            {status !== "pending" && (
+                              <Button size="sm" variant="ghost" onClick={() => updateStatus(a.id, job.id, "pending")}>
+                                Reset
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

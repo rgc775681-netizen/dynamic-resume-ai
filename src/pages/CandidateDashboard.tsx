@@ -23,6 +23,7 @@ const CandidateDashboard = () => {
   const [resume, setResume] = useState<Resume | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [appStatuses, setAppStatuses] = useState<Record<string, string>>({});
   const [parsing, setParsing] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,11 +41,14 @@ const CandidateDashboard = () => {
     const [rRes, jRes, aRes] = await Promise.all([
       supabase.from("resumes").select("*").eq("candidate_id", user!.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("jobs").select("*").eq("status", "open").order("created_at", { ascending: false }),
-      supabase.from("applications").select("job_id").eq("candidate_id", user!.id),
+      supabase.from("applications").select("job_id, status").eq("candidate_id", user!.id),
     ]);
     setResume((rRes.data as Resume | null) ?? null);
     setJobs((jRes.data as Job[]) || []);
-    setAppliedIds(new Set((aRes.data || []).map((x: any) => x.job_id)));
+    const map: Record<string, string> = {};
+    (aRes.data || []).forEach((x: any) => { map[x.job_id] = x.status || "pending"; });
+    setAppStatuses(map);
+    setAppliedIds(new Set(Object.keys(map)));
   };
 
   const extractPdfText = async (file: File): Promise<string> => {
@@ -122,6 +126,7 @@ const CandidateDashboard = () => {
       });
       if (appErr) throw appErr;
       setAppliedIds(new Set([...appliedIds, job.id]));
+      setAppStatuses(prev => ({ ...prev, [job.id]: "pending" }));
       toast.success(`Applied! Match score: ${Math.round(scoreData.match_score)}/100`);
     } catch (e: any) {
       toast.error(e.message || "Failed to apply");
@@ -195,7 +200,12 @@ const CandidateDashboard = () => {
                       </div>
                     </div>
                     {applied ? (
-                      <Button disabled variant="outline"><CheckCircle2 className="mr-1 text-success" /> Applied</Button>
+                      (() => {
+                        const st = appStatuses[job.id] || "pending";
+                        if (st === "shortlisted") return <Button disabled className="bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>;
+                        if (st === "rejected") return <Button disabled variant="outline" className="text-destructive border-destructive/30">Not selected</Button>;
+                        return <Button disabled variant="outline"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>;
+                      })()
                     ) : (
                       <Button variant="hero" disabled={!resume || applying === job.id} onClick={() => apply(job)}>
                         {applying === job.id ? "AI Matching..." : <>Apply with AI <ArrowRight className="ml-1" /></>}
