@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, FileText, Briefcase, MapPin, ArrowRight, CheckCircle2, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
