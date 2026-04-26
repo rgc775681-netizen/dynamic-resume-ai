@@ -74,6 +74,9 @@ const Auth = () => {
             <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
             <div><Label>Password</Label><Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></div>
             <Button variant="hero" className="w-full" disabled={busy} onClick={() => submit("signin")}>{busy ? "Signing in..." : "Sign In"}</Button>
+            <button type="button" onClick={() => navigate("/forgot-password")} className="text-sm text-primary hover:underline w-full text-center">
+              Forgot password?
+            </button>
           </TabsContent>
 
           <TabsContent value="signup" className="space-y-4">
