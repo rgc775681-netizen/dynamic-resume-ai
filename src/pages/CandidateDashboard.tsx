@@ -23,7 +23,7 @@ const CandidateDashboard = () => {
   const [resume, setResume] = useState<Resume | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
-  const [appStatuses, setAppStatuses] = useState<Record<string, string>>({});
+  const [appData, setAppData] = useState<Record<string, { status: string; match_score: number; matched_skills: string[]; missing_skills: string[] }>>({});
   const [parsing, setParsing] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,13 +41,20 @@ const CandidateDashboard = () => {
     const [rRes, jRes, aRes] = await Promise.all([
       supabase.from("resumes").select("*").eq("candidate_id", user!.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("jobs").select("*").eq("status", "open").order("created_at", { ascending: false }),
-      supabase.from("applications").select("job_id, status").eq("candidate_id", user!.id),
+      supabase.from("applications").select("job_id, status, match_score, matched_skills, missing_skills").eq("candidate_id", user!.id),
     ]);
     setResume((rRes.data as Resume | null) ?? null);
     setJobs((jRes.data as Job[]) || []);
-    const map: Record<string, string> = {};
-    (aRes.data || []).forEach((x: any) => { map[x.job_id] = x.status || "pending"; });
-    setAppStatuses(map);
+    const map: Record<string, { status: string; match_score: number; matched_skills: string[]; missing_skills: string[] }> = {};
+    (aRes.data || []).forEach((x: any) => {
+      map[x.job_id] = {
+        status: x.status || "pending",
+        match_score: x.match_score || 0,
+        matched_skills: x.matched_skills || [],
+        missing_skills: x.missing_skills || [],
+      };
+    });
+    setAppData(map);
     setAppliedIds(new Set(Object.keys(map)));
   };
 
@@ -117,17 +124,27 @@ const CandidateDashboard = () => {
       if (error) throw error;
       if (scoreData?.error) throw new Error(scoreData.error);
 
+      const score = Math.round(scoreData.match_score || 0);
+      // Auto-decision: >=75 shortlist, <40 reject, else pending
+      const autoStatus = score >= 75 ? "shortlisted" : score < 40 ? "rejected" : "pending";
+      const matched = scoreData.matched_skills || [];
+      const missing = scoreData.missing_skills || [];
+
       const { error: appErr } = await supabase.from("applications").insert({
         job_id: job.id, candidate_id: user!.id, resume_id: resume.id,
-        match_score: Math.round(scoreData.match_score || 0),
+        match_score: score,
         match_reasoning: scoreData.reasoning,
-        matched_skills: scoreData.matched_skills || [],
-        missing_skills: scoreData.missing_skills || [],
+        matched_skills: matched,
+        missing_skills: missing,
+        status: autoStatus,
       });
       if (appErr) throw appErr;
       setAppliedIds(new Set([...appliedIds, job.id]));
-      setAppStatuses(prev => ({ ...prev, [job.id]: "pending" }));
-      toast.success(`Applied! Match score: ${Math.round(scoreData.match_score)}/100`);
+      setAppData(prev => ({ ...prev, [job.id]: { status: autoStatus, match_score: score, matched_skills: matched, missing_skills: missing } }));
+      const msg = autoStatus === "shortlisted" ? `🎉 Auto-shortlisted! Match: ${score}/100`
+        : autoStatus === "rejected" ? `Not a fit (score ${score}/100). Build missing skills and try again.`
+        : `Applied! Pending review · Match: ${score}/100`;
+      toast.success(msg);
     } catch (e: any) {
       toast.error(e.message || "Failed to apply");
     } finally { setApplying(null); }
@@ -199,14 +216,56 @@ const CandidateDashboard = () => {
                         {job.required_skills.slice(0, 5).map(s => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}
                       </div>
                     </div>
-                    {applied ? (
-                      (() => {
-                        const st = appStatuses[job.id] || "pending";
-                        if (st === "shortlisted") return <Button disabled className="bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>;
-                        if (st === "rejected") return <Button disabled variant="outline" className="text-destructive border-destructive/30">Not selected</Button>;
-                        return <Button disabled variant="outline"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>;
-                      })()
-                    ) : (
+                    {applied ? (() => {
+                      const a = appData[job.id];
+                      const st = a?.status || "pending";
+                      const score = a?.match_score ?? 0;
+                      const matched = a?.matched_skills || [];
+                      const missing = a?.missing_skills || [];
+                      const total = matched.length + missing.length || 1;
+                      const matchedPct = (matched.length / total) * 100;
+                      const scoreColor = score >= 75 ? "text-success" : score >= 40 ? "text-warning" : "text-destructive";
+                      return (
+                        <div className="space-y-3">
+                          {st === "shortlisted" && <Button disabled className="w-full bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>}
+                          {st === "rejected" && <Button disabled variant="outline" className="w-full text-destructive border-destructive/30">Not selected</Button>}
+                          {st === "pending" && <Button disabled variant="outline" className="w-full"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>}
+
+                          <div className="rounded-xl bg-muted/40 border border-border p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs uppercase text-muted-foreground tracking-wide">AI Match</span>
+                              <span className={`text-2xl font-bold ${scoreColor}`}>{score}<span className="text-xs text-muted-foreground">/100</span></span>
+                            </div>
+                            {/* Skill-gap stacked bar */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[11px] text-muted-foreground">
+                                <span>{matched.length} matched</span>
+                                <span>{missing.length} missing</span>
+                              </div>
+                              <div className="flex h-2.5 rounded-full overflow-hidden bg-destructive/20">
+                                <div className="bg-success transition-all" style={{ width: `${matchedPct}%` }} />
+                              </div>
+                            </div>
+                            {matched.length > 0 && (
+                              <div>
+                                <p className="text-[11px] uppercase text-muted-foreground mb-1">You have</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {matched.map(s => <Badge key={s} className="bg-success/15 text-success border-0 text-[11px]">✓ {s}</Badge>)}
+                                </div>
+                              </div>
+                            )}
+                            {missing.length > 0 && (
+                              <div>
+                                <p className="text-[11px] uppercase text-muted-foreground mb-1">Skills to learn</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {missing.map(s => <Badge key={s} variant="outline" className="text-destructive border-destructive/30 text-[11px]">✗ {s}</Badge>)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })() : (
                       <Button variant="hero" disabled={!resume || applying === job.id} onClick={() => apply(job)}>
                         {applying === job.id ? "AI Matching..." : <>Apply with AI <ArrowRight className="ml-1" /></>}
                       </Button>

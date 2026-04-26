@@ -6,6 +6,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import RoleSelect from "./pages/RoleSelect.tsx";
 import RecruiterDashboard from "./pages/RecruiterDashboard.tsx";
 import Analytics from "./pages/Analytics.tsx";
@@ -25,6 +27,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/role" element={<RoleSelect />} />
             <Route path="/recruiter" element={<RecruiterDashboard />} />
             <Route path="/analytics" element={<Analytics />} />

@@ -64,15 +64,7 @@ const RecruiterDashboard = () => {
     loadJobs();
   };
 
-  const updateStatus = async (appId: string, jobId: string, status: "shortlisted" | "rejected" | "pending") => {
-    const { error } = await supabase.from("applications").update({ status }).eq("id", appId);
-    if (error) { toast.error(error.message); return; }
-    setApps(prev => ({
-      ...prev,
-      [jobId]: (prev[jobId] || []).map(a => a.id === appId ? { ...a, status } : a),
-    }));
-    toast.success(status === "shortlisted" ? "Candidate shortlisted ✓" : status === "rejected" ? "Candidate rejected" : "Status reset");
-  };
+  // Status is decided automatically by the AI match score on apply.
 
   return (
     <div className="min-h-screen">
@@ -164,22 +156,9 @@ const RecruiterDashboard = () => {
                               {a.missing_skills.map(s => <Badge key={s} variant="outline" className="text-destructive border-destructive/30">✗ {s}</Badge>)}
                             </div>
                           )}
-                          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
-                            {status !== "shortlisted" && (
-                              <Button size="sm" variant="hero" onClick={() => updateStatus(a.id, job.id, "shortlisted")}>
-                                <Check className="w-4 h-4 mr-1" /> Shortlist
-                              </Button>
-                            )}
-                            {status !== "rejected" && (
-                              <Button size="sm" variant="outline" onClick={() => updateStatus(a.id, job.id, "rejected")}>
-                                <X className="w-4 h-4 mr-1" /> Reject
-                              </Button>
-                            )}
-                            {status !== "pending" && (
-                              <Button size="sm" variant="ghost" onClick={() => updateStatus(a.id, job.id, "pending")}>
-                                Reset
-                              </Button>
-                            )}
+                          <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground italic">
+                            <Sparkles className="w-3 h-3 inline mr-1 text-primary" />
+                            Decision made automatically by AI based on match score (≥75 shortlist · &lt;40 reject).
                           </div>
                         </div>
                         );
