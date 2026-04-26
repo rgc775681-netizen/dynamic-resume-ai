@@ -178,22 +178,40 @@ const CandidateDashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Upload a PDF resume or paste text. Our AI will extract skills, experience, education, and more.</p>
+              <p className="text-sm text-muted-foreground">Upload your resume as a PDF. Our AI will extract skills, experience, education, and more — automatically.</p>
               <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={onPdfSelected} />
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" disabled={extracting || parsing} onClick={() => fileInputRef.current?.click()}>
-                  {extracting ? <><Loader2 className="mr-1 animate-spin" /> Reading PDF...</> : <><Upload className="mr-1" /> Upload PDF</>}
-                </Button>
-                <span className="text-xs text-muted-foreground self-center">— or paste text below —</span>
-              </div>
-              <Textarea rows={10} value={resumeText} onChange={e => setResumeText(e.target.value)}
-                placeholder={"John Doe\njohn@example.com · +1 555 0123\n\nEXPERIENCE\nSenior Engineer at Acme (2020-2024)\n- Built scalable APIs in Python and PostgreSQL..."} />
-              <Button variant="hero" disabled={parsing || extracting} onClick={() => parseResume()}>
-                <Sparkles className="mr-1" /> {parsing ? "AI Parsing..." : "Parse with AI"}
+              <Button variant="hero" type="button" disabled={extracting || parsing} onClick={() => fileInputRef.current?.click()}>
+                {extracting ? <><Loader2 className="mr-1 animate-spin" /> Reading PDF...</>
+                  : parsing ? <><Sparkles className="mr-1" /> AI Parsing...</>
+                  : <><Upload className="mr-1" /> Upload PDF Resume</>}
               </Button>
+              <p className="text-xs text-muted-foreground">PDF only · max 10MB</p>
             </div>
           )}
         </div>
+
+        {Object.values(appData).length > 0 && (() => {
+          const apps = Object.values(appData);
+          const sl = apps.filter(a => a.status === "shortlisted").length;
+          const rj = apps.filter(a => a.status === "rejected").length;
+          const pd = apps.filter(a => a.status === "pending").length;
+          return (
+            <div className="grid grid-cols-3 gap-3 animate-fade-up">
+              <div className="glow-card p-4 text-center border-success/30">
+                <p className="text-xs uppercase text-muted-foreground">Shortlisted</p>
+                <p className="text-3xl font-bold text-success">{sl}</p>
+              </div>
+              <div className="glow-card p-4 text-center">
+                <p className="text-xs uppercase text-muted-foreground">Pending</p>
+                <p className="text-3xl font-bold text-warning">{pd}</p>
+              </div>
+              <div className="glow-card p-4 text-center border-destructive/30">
+                <p className="text-xs uppercase text-muted-foreground">Rejected</p>
+                <p className="text-3xl font-bold text-destructive">{rj}</p>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="space-y-4">
           <h2 className="font-display text-2xl font-bold">Open Positions</h2>
