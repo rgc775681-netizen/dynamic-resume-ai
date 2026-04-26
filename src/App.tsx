@@ -8,7 +8,7 @@ import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
-import RoleSelect from "./pages/RoleSelect.tsx";
+
 import RecruiterDashboard from "./pages/RecruiterDashboard.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import CandidateDashboard from "./pages/CandidateDashboard.tsx";
@@ -29,7 +29,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/role" element={<RoleSelect />} />
+            
             <Route path="/recruiter" element={<RecruiterDashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/candidate" element={<CandidateDashboard />} />

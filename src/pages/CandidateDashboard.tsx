@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, FileText, Briefcase, MapPin, ArrowRight, CheckCircle2, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ interface Job { id: string; title: string; company: string; location: string; re
 const CandidateDashboard = () => {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
-  const [resumeText, setResumeText] = useState("");
+  
   const [resume, setResume] = useState<Resume | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
@@ -73,14 +73,14 @@ const CandidateDashboard = () => {
   const onPdfSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf") { toast.error("Please upload a PDF file"); return; }
+    if (file.type !== "application/pdf") { toast.error("Only PDF files are accepted"); return; }
     if (file.size > 10 * 1024 * 1024) { toast.error("PDF must be under 10MB"); return; }
     setExtracting(true);
     try {
       const text = await extractPdfText(file);
       if (text.length < 50) throw new Error("Could not extract text — is this a scanned PDF?");
-      setResumeText(text);
       toast.success(`Extracted ${text.length.toLocaleString()} characters from PDF`);
+      await parseResume(text);
     } catch (err: any) {
       toast.error(err.message || "Failed to read PDF");
     } finally {
@@ -89,8 +89,8 @@ const CandidateDashboard = () => {
     }
   };
 
-  const parseResume = async (overrideText?: string) => {
-    const text = (overrideText ?? resumeText).trim();
+  const parseResume = async (text: string) => {
+    text = text.trim();
     if (text.length < 50) { toast.error("Resume text too short (50+ chars)."); return; }
     setParsing(true);
     try {
@@ -106,7 +106,6 @@ const CandidateDashboard = () => {
       }).select().single();
       if (insErr) throw insErr;
       setResume(saved as Resume);
-      setResumeText("");
       toast.success("Resume parsed and saved!");
     } catch (e: any) {
       toast.error(e.message || "Failed to parse resume");
@@ -178,22 +177,40 @@ const CandidateDashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Upload a PDF resume or paste text. Our AI will extract skills, experience, education, and more.</p>
+              <p className="text-sm text-muted-foreground">Upload your resume as a PDF. Our AI will extract skills, experience, education, and more — automatically.</p>
               <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={onPdfSelected} />
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" disabled={extracting || parsing} onClick={() => fileInputRef.current?.click()}>
-                  {extracting ? <><Loader2 className="mr-1 animate-spin" /> Reading PDF...</> : <><Upload className="mr-1" /> Upload PDF</>}
-                </Button>
-                <span className="text-xs text-muted-foreground self-center">— or paste text below —</span>
-              </div>
-              <Textarea rows={10} value={resumeText} onChange={e => setResumeText(e.target.value)}
-                placeholder={"John Doe\njohn@example.com · +1 555 0123\n\nEXPERIENCE\nSenior Engineer at Acme (2020-2024)\n- Built scalable APIs in Python and PostgreSQL..."} />
-              <Button variant="hero" disabled={parsing || extracting} onClick={() => parseResume()}>
-                <Sparkles className="mr-1" /> {parsing ? "AI Parsing..." : "Parse with AI"}
+              <Button variant="hero" type="button" disabled={extracting || parsing} onClick={() => fileInputRef.current?.click()}>
+                {extracting ? <><Loader2 className="mr-1 animate-spin" /> Reading PDF...</>
+                  : parsing ? <><Sparkles className="mr-1" /> AI Parsing...</>
+                  : <><Upload className="mr-1" /> Upload PDF Resume</>}
               </Button>
+              <p className="text-xs text-muted-foreground">PDF only · max 10MB</p>
             </div>
           )}
         </div>
+
+        {Object.values(appData).length > 0 && (() => {
+          const apps = Object.values(appData);
+          const sl = apps.filter(a => a.status === "shortlisted").length;
+          const rj = apps.filter(a => a.status === "rejected").length;
+          const pd = apps.filter(a => a.status === "pending").length;
+          return (
+            <div className="grid grid-cols-3 gap-3 animate-fade-up">
+              <div className="glow-card p-4 text-center border-success/30">
+                <p className="text-xs uppercase text-muted-foreground">Shortlisted</p>
+                <p className="text-3xl font-bold text-success">{sl}</p>
+              </div>
+              <div className="glow-card p-4 text-center">
+                <p className="text-xs uppercase text-muted-foreground">Pending</p>
+                <p className="text-3xl font-bold text-warning">{pd}</p>
+              </div>
+              <div className="glow-card p-4 text-center border-destructive/30">
+                <p className="text-xs uppercase text-muted-foreground">Rejected</p>
+                <p className="text-3xl font-bold text-destructive">{rj}</p>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="space-y-4">
           <h2 className="font-display text-2xl font-bold">Open Positions</h2>
@@ -227,9 +244,27 @@ const CandidateDashboard = () => {
                       const scoreColor = score >= 75 ? "text-success" : score >= 40 ? "text-warning" : "text-destructive";
                       return (
                         <div className="space-y-3">
-                          {st === "shortlisted" && <Button disabled className="w-full bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>}
-                          {st === "rejected" && <Button disabled variant="outline" className="w-full text-destructive border-destructive/30">Not selected</Button>}
-                          {st === "pending" && <Button disabled variant="outline" className="w-full"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>}
+                          {st === "shortlisted" && (
+                            <div className="rounded-xl border-2 border-success bg-success/15 p-3 text-center">
+                              <p className="text-2xl">🎉</p>
+                              <p className="font-display font-bold text-success text-lg">SELECTED</p>
+                              <p className="text-xs text-success/80">You've been shortlisted for this role</p>
+                            </div>
+                          )}
+                          {st === "rejected" && (
+                            <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-3 text-center">
+                              <p className="text-2xl">❌</p>
+                              <p className="font-display font-bold text-destructive text-lg">REJECTED</p>
+                              <p className="text-xs text-destructive/80">Skill match below threshold</p>
+                            </div>
+                          )}
+                          {st === "pending" && (
+                            <div className="rounded-xl border-2 border-warning/50 bg-warning/10 p-3 text-center">
+                              <p className="text-2xl">⏳</p>
+                              <p className="font-display font-bold text-warning text-lg">UNDER REVIEW</p>
+                              <p className="text-xs text-muted-foreground">Application submitted</p>
+                            </div>
+                          )}
 
                           <div className="rounded-xl bg-muted/40 border border-border p-3 space-y-2">
                             <div className="flex items-center justify-between">

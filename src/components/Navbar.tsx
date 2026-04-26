@@ -7,13 +7,7 @@ export const Navbar = () => {
   const { user, role, availableRoles, signOut, setActiveRole } = useAuth();
   const navigate = useNavigate();
 
-  const switchRole = () => {
-    const other = role === "recruiter" ? "candidate" : "recruiter";
-    setActiveRole(other);
-    navigate(other === "recruiter" ? "/recruiter" : "/candidate");
-  };
-
-  const hasBothRoles = availableRoles.filter(Boolean).length > 1;
+  const isRecruiter = role === "recruiter";
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-white/30">
@@ -27,17 +21,12 @@ export const Navbar = () => {
         <nav className="flex items-center gap-2">
           {user ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => navigate(role === "recruiter" ? "/recruiter" : "/candidate")}>
+              <Button variant="ghost" size="sm" onClick={() => navigate(isRecruiter ? "/recruiter" : "/candidate")}>
                 Dashboard
               </Button>
-              {role === "recruiter" && (
+              {isRecruiter && (
                 <Button variant="ghost" size="sm" onClick={() => navigate("/analytics")}>
                   <BarChart3 className="w-4 h-4 mr-1" /> Analytics
-                </Button>
-              )}
-              {hasBothRoles && (
-                <Button variant="ghost" size="sm" onClick={switchRole} title={`Switch to ${role === "recruiter" ? "candidate" : "recruiter"}`}>
-                  <Repeat className="w-4 h-4 mr-1" /> {role === "recruiter" ? "Candidate view" : "Recruiter view"}
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={async () => { await signOut(); navigate("/"); }}>

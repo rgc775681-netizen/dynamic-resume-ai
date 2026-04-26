@@ -24,8 +24,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (!loading && user) {
-      if (role) navigate(role === "recruiter" ? "/recruiter" : "/candidate");
-      else navigate("/role");
+      navigate(role === "recruiter" ? "/recruiter" : "/candidate");
     }
   }, [user, role, loading, navigate]);
 
@@ -37,10 +36,10 @@ const Auth = () => {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email: form.email, password: form.password,
-          options: { emailRedirectTo: `${window.location.origin}/role`, data: { full_name: form.full_name } },
+          options: { emailRedirectTo: `${window.location.origin}/candidate`, data: { full_name: form.full_name } },
         });
         if (error) throw error;
-        toast.success("Account created! Pick your role.");
+        toast.success("Account created! You can now sign in as a candidate.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
         if (error) throw error;
