@@ -245,9 +245,27 @@ const CandidateDashboard = () => {
                       const scoreColor = score >= 75 ? "text-success" : score >= 40 ? "text-warning" : "text-destructive";
                       return (
                         <div className="space-y-3">
-                          {st === "shortlisted" && <Button disabled className="w-full bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>}
-                          {st === "rejected" && <Button disabled variant="outline" className="w-full text-destructive border-destructive/30">Not selected</Button>}
-                          {st === "pending" && <Button disabled variant="outline" className="w-full"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>}
+                          {st === "shortlisted" && (
+                            <div className="rounded-xl border-2 border-success bg-success/15 p-3 text-center">
+                              <p className="text-2xl">🎉</p>
+                              <p className="font-display font-bold text-success text-lg">SELECTED</p>
+                              <p className="text-xs text-success/80">You've been shortlisted for this role</p>
+                            </div>
+                          )}
+                          {st === "rejected" && (
+                            <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-3 text-center">
+                              <p className="text-2xl">❌</p>
+                              <p className="font-display font-bold text-destructive text-lg">REJECTED</p>
+                              <p className="text-xs text-destructive/80">Skill match below threshold</p>
+                            </div>
+                          )}
+                          {st === "pending" && (
+                            <div className="rounded-xl border-2 border-warning/50 bg-warning/10 p-3 text-center">
+                              <p className="text-2xl">⏳</p>
+                              <p className="font-display font-bold text-warning text-lg">UNDER REVIEW</p>
+                              <p className="text-xs text-muted-foreground">Application submitted</p>
+                            </div>
+                          )}
 
                           <div className="rounded-xl bg-muted/40 border border-border p-3 space-y-2">
                             <div className="flex items-center justify-between">
