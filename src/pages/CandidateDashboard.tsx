@@ -73,14 +73,14 @@ const CandidateDashboard = () => {
   const onPdfSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf") { toast.error("Please upload a PDF file"); return; }
+    if (file.type !== "application/pdf") { toast.error("Only PDF files are accepted"); return; }
     if (file.size > 10 * 1024 * 1024) { toast.error("PDF must be under 10MB"); return; }
     setExtracting(true);
     try {
       const text = await extractPdfText(file);
       if (text.length < 50) throw new Error("Could not extract text — is this a scanned PDF?");
-      setResumeText(text);
       toast.success(`Extracted ${text.length.toLocaleString()} characters from PDF`);
+      await parseResume(text);
     } catch (err: any) {
       toast.error(err.message || "Failed to read PDF");
     } finally {
