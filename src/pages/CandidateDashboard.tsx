@@ -216,14 +216,56 @@ const CandidateDashboard = () => {
                         {job.required_skills.slice(0, 5).map(s => <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>)}
                       </div>
                     </div>
-                    {applied ? (
-                      (() => {
-                        const st = appStatuses[job.id] || "pending";
-                        if (st === "shortlisted") return <Button disabled className="bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>;
-                        if (st === "rejected") return <Button disabled variant="outline" className="text-destructive border-destructive/30">Not selected</Button>;
-                        return <Button disabled variant="outline"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>;
-                      })()
-                    ) : (
+                    {applied ? (() => {
+                      const a = appData[job.id];
+                      const st = a?.status || "pending";
+                      const score = a?.match_score ?? 0;
+                      const matched = a?.matched_skills || [];
+                      const missing = a?.missing_skills || [];
+                      const total = matched.length + missing.length || 1;
+                      const matchedPct = (matched.length / total) * 100;
+                      const scoreColor = score >= 75 ? "text-success" : score >= 40 ? "text-warning" : "text-destructive";
+                      return (
+                        <div className="space-y-3">
+                          {st === "shortlisted" && <Button disabled className="w-full bg-success/15 text-success border-0 hover:bg-success/15"><CheckCircle2 className="mr-1" /> Shortlisted 🎉</Button>}
+                          {st === "rejected" && <Button disabled variant="outline" className="w-full text-destructive border-destructive/30">Not selected</Button>}
+                          {st === "pending" && <Button disabled variant="outline" className="w-full"><CheckCircle2 className="mr-1 text-success" /> Applied · Pending review</Button>}
+
+                          <div className="rounded-xl bg-muted/40 border border-border p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs uppercase text-muted-foreground tracking-wide">AI Match</span>
+                              <span className={`text-2xl font-bold ${scoreColor}`}>{score}<span className="text-xs text-muted-foreground">/100</span></span>
+                            </div>
+                            {/* Skill-gap stacked bar */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[11px] text-muted-foreground">
+                                <span>{matched.length} matched</span>
+                                <span>{missing.length} missing</span>
+                              </div>
+                              <div className="flex h-2.5 rounded-full overflow-hidden bg-destructive/20">
+                                <div className="bg-success transition-all" style={{ width: `${matchedPct}%` }} />
+                              </div>
+                            </div>
+                            {matched.length > 0 && (
+                              <div>
+                                <p className="text-[11px] uppercase text-muted-foreground mb-1">You have</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {matched.map(s => <Badge key={s} className="bg-success/15 text-success border-0 text-[11px]">✓ {s}</Badge>)}
+                                </div>
+                              </div>
+                            )}
+                            {missing.length > 0 && (
+                              <div>
+                                <p className="text-[11px] uppercase text-muted-foreground mb-1">Skills to learn</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {missing.map(s => <Badge key={s} variant="outline" className="text-destructive border-destructive/30 text-[11px]">✗ {s}</Badge>)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })() : (
                       <Button variant="hero" disabled={!resume || applying === job.id} onClick={() => apply(job)}>
                         {applying === job.id ? "AI Matching..." : <>Apply with AI <ArrowRight className="ml-1" /></>}
                       </Button>
