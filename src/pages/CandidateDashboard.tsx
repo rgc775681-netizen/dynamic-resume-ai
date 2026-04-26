@@ -19,7 +19,7 @@ interface Job { id: string; title: string; company: string; location: string; re
 const CandidateDashboard = () => {
   const { user, role, loading } = useAuth();
   const navigate = useNavigate();
-  const [resumeText, setResumeText] = useState("");
+  
   const [resume, setResume] = useState<Resume | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
