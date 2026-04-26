@@ -64,15 +64,7 @@ const RecruiterDashboard = () => {
     loadJobs();
   };
 
-  const updateStatus = async (appId: string, jobId: string, status: "shortlisted" | "rejected" | "pending") => {
-    const { error } = await supabase.from("applications").update({ status }).eq("id", appId);
-    if (error) { toast.error(error.message); return; }
-    setApps(prev => ({
-      ...prev,
-      [jobId]: (prev[jobId] || []).map(a => a.id === appId ? { ...a, status } : a),
-    }));
-    toast.success(status === "shortlisted" ? "Candidate shortlisted ✓" : status === "rejected" ? "Candidate rejected" : "Status reset");
-  };
+  // Status is decided automatically by the AI match score on apply.
 
   return (
     <div className="min-h-screen">
