@@ -8,7 +8,7 @@ import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
-import RoleSelect from "./pages/RoleSelect.tsx";
+
 import RecruiterDashboard from "./pages/RecruiterDashboard.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import CandidateDashboard from "./pages/CandidateDashboard.tsx";
