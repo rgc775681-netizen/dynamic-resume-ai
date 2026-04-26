@@ -89,8 +89,8 @@ const CandidateDashboard = () => {
     }
   };
 
-  const parseResume = async (overrideText?: string) => {
-    const text = (overrideText ?? resumeText).trim();
+  const parseResume = async (text: string) => {
+    text = text.trim();
     if (text.length < 50) { toast.error("Resume text too short (50+ chars)."); return; }
     setParsing(true);
     try {
@@ -106,7 +106,6 @@ const CandidateDashboard = () => {
       }).select().single();
       if (insErr) throw insErr;
       setResume(saved as Resume);
-      setResumeText("");
       toast.success("Resume parsed and saved!");
     } catch (e: any) {
       toast.error(e.message || "Failed to parse resume");
