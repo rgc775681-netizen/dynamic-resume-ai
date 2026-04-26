@@ -23,7 +23,7 @@ const CandidateDashboard = () => {
   const [resume, setResume] = useState<Resume | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
-  const [appStatuses, setAppStatuses] = useState<Record<string, string>>({});
+  const [appData, setAppData] = useState<Record<string, { status: string; match_score: number; matched_skills: string[]; missing_skills: string[] }>>({});
   const [parsing, setParsing] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,13 +41,20 @@ const CandidateDashboard = () => {
     const [rRes, jRes, aRes] = await Promise.all([
       supabase.from("resumes").select("*").eq("candidate_id", user!.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("jobs").select("*").eq("status", "open").order("created_at", { ascending: false }),
-      supabase.from("applications").select("job_id, status").eq("candidate_id", user!.id),
+      supabase.from("applications").select("job_id, status, match_score, matched_skills, missing_skills").eq("candidate_id", user!.id),
     ]);
     setResume((rRes.data as Resume | null) ?? null);
     setJobs((jRes.data as Job[]) || []);
-    const map: Record<string, string> = {};
-    (aRes.data || []).forEach((x: any) => { map[x.job_id] = x.status || "pending"; });
-    setAppStatuses(map);
+    const map: Record<string, { status: string; match_score: number; matched_skills: string[]; missing_skills: string[] }> = {};
+    (aRes.data || []).forEach((x: any) => {
+      map[x.job_id] = {
+        status: x.status || "pending",
+        match_score: x.match_score || 0,
+        matched_skills: x.matched_skills || [],
+        missing_skills: x.missing_skills || [],
+      };
+    });
+    setAppData(map);
     setAppliedIds(new Set(Object.keys(map)));
   };
 
@@ -117,17 +124,27 @@ const CandidateDashboard = () => {
       if (error) throw error;
       if (scoreData?.error) throw new Error(scoreData.error);
 
+      const score = Math.round(scoreData.match_score || 0);
+      // Auto-decision: >=75 shortlist, <40 reject, else pending
+      const autoStatus = score >= 75 ? "shortlisted" : score < 40 ? "rejected" : "pending";
+      const matched = scoreData.matched_skills || [];
+      const missing = scoreData.missing_skills || [];
+
       const { error: appErr } = await supabase.from("applications").insert({
         job_id: job.id, candidate_id: user!.id, resume_id: resume.id,
-        match_score: Math.round(scoreData.match_score || 0),
+        match_score: score,
         match_reasoning: scoreData.reasoning,
-        matched_skills: scoreData.matched_skills || [],
-        missing_skills: scoreData.missing_skills || [],
+        matched_skills: matched,
+        missing_skills: missing,
+        status: autoStatus,
       });
       if (appErr) throw appErr;
       setAppliedIds(new Set([...appliedIds, job.id]));
-      setAppStatuses(prev => ({ ...prev, [job.id]: "pending" }));
-      toast.success(`Applied! Match score: ${Math.round(scoreData.match_score)}/100`);
+      setAppData(prev => ({ ...prev, [job.id]: { status: autoStatus, match_score: score, matched_skills: matched, missing_skills: missing } }));
+      const msg = autoStatus === "shortlisted" ? `🎉 Auto-shortlisted! Match: ${score}/100`
+        : autoStatus === "rejected" ? `Not a fit (score ${score}/100). Build missing skills and try again.`
+        : `Applied! Pending review · Match: ${score}/100`;
+      toast.success(msg);
     } catch (e: any) {
       toast.error(e.message || "Failed to apply");
     } finally { setApplying(null); }
