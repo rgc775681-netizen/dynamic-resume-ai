@@ -32,10 +32,10 @@ const Index = () => {
               <span className="ml-1 px-2 py-0.5 rounded-full bg-gradient-primary text-white text-[10px] font-bold tracking-wide">NEW</span>
             </div>
             <h1 className="font-display text-5xl md:text-7xl font-extrabold leading-[1.05]">
-              Hire smarter with <span className="gradient-text-hero">intelligent</span> talent matching
+              Where <span className="gradient-text-hero">extraordinary talent</span> meets unstoppable opportunity
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl leading-relaxed">
-              A modern recruitment workspace with intelligent resume parsing and precise candidate-job matching — built for speed, clarity, and beautiful hiring decisions.
+              Say goodbye to endless resume piles and guesswork. RecruitPro turns hiring into a beautifully simple craft — surfacing the right people, for the right roles, at the speed of thought.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Button variant="hero" size="lg" onClick={() => navigate("/auth")}>
