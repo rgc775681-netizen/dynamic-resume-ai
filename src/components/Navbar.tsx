@@ -16,7 +16,7 @@ export const Navbar = () => {
           <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center shadow-[var(--shadow-glow)] group-hover:scale-110 transition-transform">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <span className="font-display font-bold text-xl gradient-text">TalentAI</span>
+          <span className="font-display font-bold text-xl gradient-text">RecruitPro</span>
         </Link>
         <nav className="flex items-center gap-2">
           {user ? (
