@@ -39,10 +39,10 @@ const Index = () => {
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Button variant="hero" size="lg" onClick={() => navigate("/auth")}>
-                I'm a Candidate <ArrowRight className="ml-1" />
+                Parse My Resume <ArrowRight className="ml-1" />
               </Button>
               <Button variant="outline" size="lg" onClick={() => navigate("/auth")} className="backdrop-blur bg-white/40 border-white/60 hover:bg-white/60">
-                I'm a Recruiter
+                I'm Hiring for a Role
               </Button>
             </div>
             <div className="flex flex-wrap gap-6 pt-3 text-sm text-muted-foreground">
