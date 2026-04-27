@@ -56,12 +56,14 @@ const Auth = () => {
       <div className="animated-blob bg-accent/40 w-96 h-96 bottom-0 right-0" style={{ animationDelay: "6s" }} />
 
       <div className="glow-card w-full max-w-md p-8 relative z-10 animate-fade-up">
-        <div className="flex items-center gap-2 mb-6 cursor-pointer" onClick={() => navigate("/")}>
+        <div className="flex items-center gap-2 mb-2 cursor-pointer" onClick={() => navigate("/")}>
           <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-[var(--shadow-glow)]">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <span className="font-display font-bold text-2xl gradient-text">RecruitPro</span>
         </div>
+        <h1 className="font-display text-2xl font-bold mt-3">Welcome 👋</h1>
+        <p className="text-sm text-muted-foreground mb-6">Sign in to continue or create a new candidate account.</p>
 
         <Tabs defaultValue="signin">
           <TabsList className="grid grid-cols-2 w-full mb-6">
