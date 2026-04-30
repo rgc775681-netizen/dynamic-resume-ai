@@ -140,9 +140,28 @@ const CandidateDashboard = () => {
       if (appErr) throw appErr;
       setAppliedIds(new Set([...appliedIds, job.id]));
       setAppData(prev => ({ ...prev, [job.id]: { status: autoStatus, match_score: score, matched_skills: matched, missing_skills: missing } }));
-      const msg = autoStatus === "shortlisted" ? `🎉 Auto-shortlisted! Match: ${score}/100`
-        : autoStatus === "rejected" ? `Not a fit (score ${score}/100). Build missing skills and try again.`
-        : `Applied! Pending review · Match: ${score}/100`;
+
+      // Fire-and-forget: send a detailed status email to the candidate
+      const recipient = resume.email || user!.email;
+      if (recipient) {
+        supabase.functions.invoke("send-application-email", {
+          body: {
+            to: recipient,
+            candidateName: resume.full_name || "",
+            jobTitle: job.title,
+            company: job.company,
+            status: autoStatus,
+            matchScore: score,
+            matchedSkills: matched,
+            missingSkills: missing,
+            reasoning: scoreData.reasoning,
+          },
+        }).catch((err) => console.error("Email send failed:", err));
+      }
+
+      const msg = autoStatus === "shortlisted" ? `🎉 Auto-shortlisted! Match: ${score}/100 · Email sent`
+        : autoStatus === "rejected" ? `Not a fit (score ${score}/100). Check your email for details.`
+        : `Applied! Match: ${score}/100 · Email sent`;
       toast.success(msg);
     } catch (e: any) {
       toast.error(e.message || "Failed to apply");
