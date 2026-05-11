@@ -26,16 +26,26 @@ const ResetPassword = () => {
   }, []);
 
   const submit = async () => {
-    if (password.length < 6) { toast.error("Password must be 6+ characters"); return; }
-    if (password !== confirm) { toast.error("Passwords don't match"); return; }
+    if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (password !== confirm) { toast.error("Passwords don't match — please retype them"); return; }
     setBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
+      // Force a fresh session with the new password
+      await supabase.auth.refreshSession();
+      const { data: { session } } = await supabase.auth.getSession();
       toast.success("Password updated! You're signed in.");
-      navigate("/role");
+      navigate(session ? "/candidate" : "/auth");
     } catch (e: any) {
-      toast.error(e.message || "Failed to update password");
+      const msg = (e?.message || "").toLowerCase();
+      if (msg.includes("same") || msg.includes("different from")) {
+        toast.error("New password must be different from your current one.");
+      } else if (msg.includes("session")) {
+        toast.error("Your reset link expired. Request a new password reset email.");
+      } else {
+        toast.error(e?.message || "Failed to update password");
+      }
     } finally { setBusy(false); }
   };
 

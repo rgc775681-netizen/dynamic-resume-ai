@@ -41,12 +41,25 @@ const Auth = () => {
         if (error) throw error;
         toast.success("Account created! You can now sign in as a candidate.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        const email = form.email.trim().toLowerCase();
+        const { error } = await supabase.auth.signInWithPassword({ email, password: form.password });
         if (error) throw error;
         toast.success("Welcome back!");
       }
     } catch (e: any) {
-      toast.error(e.message || "Authentication failed");
+      const msg = (e?.message || "").toLowerCase();
+      const code = e?.code || "";
+      if (code === "invalid_credentials" || msg.includes("invalid login")) {
+        toast.error("Email or password is incorrect. Check for typos, caps lock, or use 'Forgot password?' to reset.");
+      } else if (msg.includes("email not confirmed")) {
+        toast.error("Please confirm your email first — check your inbox for the verification link.");
+      } else if (msg.includes("user already registered")) {
+        toast.error("An account with this email already exists. Try signing in instead.");
+      } else if (msg.includes("rate")) {
+        toast.error("Too many attempts. Please wait a minute and try again.");
+      } else {
+        toast.error(e?.message || "Authentication failed");
+      }
     } finally { setBusy(false); }
   };
 
