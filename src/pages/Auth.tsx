@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Briefcase, UserCircle2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
