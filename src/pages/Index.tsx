@@ -158,10 +158,10 @@ const Index = () => {
             <h2 className="font-display text-4xl md:text-5xl font-bold">Ready to revolutionize hiring?</h2>
             <p className="text-white/90 text-lg max-w-xl mx-auto">Join as a candidate or recruiter and explore the full smart matching workflow.</p>
             <div className="flex flex-wrap gap-3 justify-center pt-2">
-              <Button size="lg" onClick={() => navigate("/auth")} className="bg-white text-primary hover:bg-white/90 font-semibold">
+              <Button size="lg" onClick={() => navigate("/auth?role=candidate")} className="bg-white text-primary hover:bg-white/90 font-semibold">
                 I'm a Candidate <ArrowRight className="ml-1" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate("/auth")} className="bg-white/10 text-white border-white/40 hover:bg-white/20 hover:text-white">
+              <Button size="lg" variant="outline" onClick={() => navigate("/auth?role=recruiter")} className="bg-white/10 text-white border-white/40 hover:bg-white/20 hover:text-white">
                 I'm a Recruiter
               </Button>
             </div>
