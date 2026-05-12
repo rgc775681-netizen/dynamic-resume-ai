@@ -18,6 +18,9 @@ const schema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const intent = (params.get("role") === "recruiter" ? "recruiter" : "candidate") as "recruiter" | "candidate";
+  const isRecruiter = intent === "recruiter";
   const { user, role, loading } = useAuth();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
