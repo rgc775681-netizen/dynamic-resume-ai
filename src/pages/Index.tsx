@@ -38,11 +38,11 @@ const Index = () => {
               Say goodbye to endless resume piles and guesswork. RecruitPro turns hiring into a beautifully simple craft — surfacing the right people, for the right roles, at the speed of thought.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
-              <Button variant="hero" size="lg" onClick={() => navigate("/auth")}>
-                Parse My Resume <ArrowRight className="ml-1" />
+              <Button variant="hero" size="lg" onClick={() => navigate("/auth?role=candidate")}>
+                I'm a Candidate <ArrowRight className="ml-1" />
               </Button>
-              <Button variant="outline" size="lg" onClick={() => navigate("/auth")} className="backdrop-blur bg-white/40 border-white/60 hover:bg-white/60">
-                I'm Hiring for a Role
+              <Button variant="outline" size="lg" onClick={() => navigate("/auth?role=recruiter")} className="backdrop-blur bg-white/40 border-white/60 hover:bg-white/60">
+                I'm a Recruiter
               </Button>
             </div>
             <div className="flex flex-wrap gap-6 pt-3 text-sm text-muted-foreground">
