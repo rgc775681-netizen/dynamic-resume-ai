@@ -15,14 +15,28 @@ const ResetPassword = () => {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Supabase auth processes the recovery hash and fires PASSWORD_RECOVERY
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
+    // Detect recovery tokens in URL (hash or query) — enables form immediately
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    const hasRecoveryToken =
+      hash.includes("access_token") ||
+      hash.includes("type=recovery") ||
+      search.includes("code=") ||
+      search.includes("type=recovery");
+    if (hasRecoveryToken) setReady(true);
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN" || session) {
+        setReady(true);
+      }
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true);
     });
-    return () => sub.subscription.unsubscribe();
+
+    // Failsafe: enable form after 2s so users aren't blocked if events don't fire
+    const t = setTimeout(() => setReady(true), 2000);
+    return () => { sub.subscription.unsubscribe(); clearTimeout(t); };
   }, []);
 
   const submit = async () => {
